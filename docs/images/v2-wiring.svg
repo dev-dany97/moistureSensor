@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700" width="1000" height="700" font-family="Helvetica, Arial, sans-serif" font-size="14">
+  <rect width="1000" height="700" fill="#ffffff"/>
+  <style>
+    .box{fill:#f4f6f8;stroke:#333;stroke-width:2;rx:8}
+    .esp{fill:#e3edf9;stroke:#1f4e8c;stroke-width:2.5}
+    .t{fill:#111;font-weight:bold;font-size:15px}
+    .s{fill:#444;font-size:12px}
+    .p{fill:#111;font-size:12px}
+    .pwr{stroke:#d62728;stroke-width:3;fill:none}
+    .gnd{stroke:#222;stroke-width:3;fill:none}
+    .sda{stroke:#1f77b4;stroke-width:3;fill:none}
+    .scl{stroke:#e6a700;stroke-width:3;fill:none}
+    .sig{stroke:#2ca02c;stroke-width:3;fill:none}
+    .dot{stroke:none}
+  </style>
+
+  <!-- Solar module -->
+  <rect class="box" x="40" y="30" width="200" height="60"/>
+  <text class="t" x="140" y="58" text-anchor="middle">Solar module</text>
+  <text class="s" x="140" y="76" text-anchor="middle">+ / −</text>
+
+  <!-- Charge module -->
+  <rect class="box" x="40" y="150" width="200" height="100"/>
+  <text class="t" x="140" y="195" text-anchor="middle">Charge module</text>
+  <text class="s" x="140" y="213" text-anchor="middle">IN · BAT · OUT</text>
+
+  <!-- INA219 -->
+  <rect class="box" x="40" y="300" width="200" height="90"/>
+  <text class="t" x="140" y="340" text-anchor="middle">INA219</text>
+  <text class="s" x="140" y="358" text-anchor="middle">I2C 0x40</text>
+
+  <!-- Battery -->
+  <rect class="box" x="40" y="440" width="200" height="70"/>
+  <text class="t" x="140" y="472" text-anchor="middle">Li-ion battery</text>
+  <text class="s" x="140" y="490" text-anchor="middle">3.7 V · 3000 mAh</text>
+
+  <!-- ESP32 -->
+  <rect class="box esp" x="400" y="130" width="200" height="330"/>
+  <text class="t" x="500" y="300" text-anchor="middle">D1 mini ESP32</text>
+  <text class="p" x="408" y="185">5V</text>
+  <text class="p" x="408" y="225">GND</text>
+  <text class="p" x="408" y="265">3V3</text>
+  <text class="p" x="592" y="185" text-anchor="end">GPIO19</text>
+  <text class="p" x="592" y="245" text-anchor="end">GPIO32</text>
+  <text class="p" x="592" y="315" text-anchor="end">GPIO16</text>
+  <text class="p" x="455" y="452" text-anchor="middle">GPIO21</text>
+  <text class="p" x="545" y="452" text-anchor="middle">GPIO22</text>
+
+  <!-- Sensors -->
+  <rect class="box" x="760" y="150" width="200" height="55"/>
+  <text class="t" x="860" y="174" text-anchor="middle">DHT11</text>
+  <text class="s" x="860" y="192" text-anchor="middle">DATA · temperature, humidity</text>
+
+  <rect class="box" x="760" y="215" width="200" height="55"/>
+  <text class="t" x="860" y="239" text-anchor="middle">Soil moisture sensor</text>
+  <text class="s" x="860" y="257" text-anchor="middle">AOUT · capacitive</text>
+
+  <rect class="box" x="760" y="290" width="200" height="50"/>
+  <text class="t" x="860" y="313" text-anchor="middle">Status LED</text>
+  <text class="s" x="860" y="330" text-anchor="middle">with resistor to GND</text>
+
+  <rect class="box" x="760" y="400" width="200" height="80"/>
+  <text class="t" x="860" y="435" text-anchor="middle">VEML7700</text>
+  <text class="s" x="860" y="453" text-anchor="middle">light · I2C 0x10</text>
+
+  <!-- Power: solar to charge module -->
+  <path class="pwr" d="M100 90 V150"/>
+  <path class="gnd" d="M180 90 V150"/>
+  <text class="s" x="108" y="125">+ → IN+</text>
+  <text class="s" x="188" y="125">− → IN−</text>
+  <!-- Charge OUT to ESP -->
+  <path class="pwr" d="M240 180 H400"/>
+  <path class="gnd" d="M240 220 H400"/>
+  <text class="s" x="320" y="173" text-anchor="middle">OUT+ → 5V</text>
+  <text class="s" x="320" y="213" text-anchor="middle">OUT− → GND</text>
+  <!-- BAT+ through INA219 to battery -->
+  <path class="pwr" d="M100 250 V300"/>
+  <path class="pwr" d="M100 390 V440"/>
+  <text class="s" x="108" y="280">BAT+ → VIN+</text>
+  <text class="s" x="108" y="420">VIN− → battery +</text>
+  <!-- BAT- to battery - -->
+  <path class="gnd" d="M240 235 H280 V475 H240"/>
+  <text class="s" x="288" y="360">BAT− → battery −</text>
+
+  <!-- Signals -->
+  <path class="sig" d="M600 180 H760"/>
+  <path class="sig" d="M600 240 H760"/>
+  <path class="sig" d="M600 310 H760"/>
+
+  <!-- I2C bus -->
+  <path class="sda" d="M25 590 H900"/>
+  <path class="scl" d="M12 615 H930"/>
+  <text class="s" x="940" y="594">SDA</text>
+  <text class="s" x="940" y="619">SCL</text>
+  <path class="sda" d="M455 460 V590"/>
+  <path class="scl" d="M545 460 V615"/>
+  <path class="sda" d="M820 480 V590"/>
+  <path class="scl" d="M900 480 V615"/>
+  <path class="sda" d="M40 330 H25 V590"/>
+  <path class="scl" d="M40 360 H12 V615"/>
+  <text class="p" x="44" y="334">SDA</text>
+  <text class="p" x="44" y="364">SCL</text>
+  <circle class="dot" cx="455" cy="590" r="5" fill="#1f77b4"/>
+  <circle class="dot" cx="820" cy="590" r="5" fill="#1f77b4"/>
+  <circle class="dot" cx="545" cy="615" r="5" fill="#e6a700"/>
+  <circle class="dot" cx="900" cy="615" r="5" fill="#e6a700"/>
+
+  <!-- Legend -->
+  <text class="s" x="40" y="660">Red: power · Black: GND · Green: signal · Blue: I2C SDA · Yellow: I2C SCL</text>
+  <text class="s" x="40" y="682">All sensors and the INA219 get VCC from 3V3 and GND from GND on the D1 mini ESP32 (not drawn).</text>
+</svg>
