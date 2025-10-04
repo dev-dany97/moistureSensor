@@ -1,0 +1,186 @@
+esphome:
+  name: plantsensor-efeutute
+  friendly_name: Plantsensor_Efeutute
+  min_version: 2025.11.0
+  name_add_mac_suffix: false
+
+  on_boot:
+    priority: -100
+    then:
+      - logger.log: "Warte auf stabile Batteriespannung..."
+      - delay: 60s
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+logger:
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  power_save_mode: HIGH
+  fast_connect: true
+
+api:
+
+ota:
+  - platform: esphome
+
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: Europe/Berlin
+    servers:
+      - 0.pool.ntp.org
+      - 1.pool.ntp.org
+      - 2.pool.ntp.org
+
+captive_portal:
+
+web_server:
+  port: 80
+
+# --------------------
+# Status LED
+# --------------------
+output:
+  - platform: gpio
+    pin: GPIO16
+    id: led_output
+
+# --------------------
+# I2C: VEML7700
+# SDA = GPIO21
+# SCL = GPIO19
+# --------------------
+i2c:
+  sda: GPIO21
+  scl: GPIO19
+  scan: true
+
+# --------------------
+# Sensoren
+# --------------------
+sensor:
+
+  # DHT11
+  - platform: dht
+    pin: GPIO22
+    model: DHT11
+    temperature:
+      name: "Plant Temperature"
+    humidity:
+      name: "Plant Humidity"
+    update_interval: 15s
+
+  # Licht VEML7700
+  - platform: veml7700
+    address: 0x10
+    update_interval: 30s
+
+    ambient_light:
+      name: "Plant Ambient Light"
+
+    full_spectrum:
+      name: "Plant Full Spectrum"
+
+    infrared:
+      name: "Plant Infrared"
+
+  # Bodenfeuchte Spannung
+  - platform: adc
+    pin: GPIO32
+    name: "Soil Moisture Sensor Voltage"
+    id: soil_moisture_voltage
+    unit_of_measurement: "V"
+    attenuation: 12db
+    accuracy_decimals: 3
+    update_interval: 10s
+
+  # Bodenfeuchte %
+  - platform: template
+    name: "Soil Moisture"
+    unit_of_measurement: "%"
+    device_class: moisture
+    accuracy_decimals: 0
+    lambda: |-
+      return id(soil_moisture_voltage).state;
+    update_interval: 10s
+    filters:
+      - calibrate_linear:
+          - 1.29 -> 100
+          - 2.80 -> 0
+      - lambda: |-
+          if (x > 100) return 100;
+          if (x < 0) return 0;
+          return x;
+
+  # Batteriespannung
+  - platform: adc
+    pin: GPIO34
+    name: "Battery Voltage"
+    id: battery_voltage
+    attenuation: 12db
+    accuracy_decimals: 2
+    update_interval: 10s
+    filters:
+      - multiply: 14
+
+  # Batteriestand %
+  - platform: template
+    name: "Battery Level"
+    unit_of_measurement: "%"
+    device_class: battery
+    accuracy_decimals: 0
+    lambda: |-
+      return id(battery_voltage).state;
+    filters:
+      - calibrate_linear:
+          - 4.20 -> 100
+          - 4.15 -> 95
+          - 4.11 -> 90
+          - 4.08 -> 85
+          - 4.02 -> 80
+          - 3.98 -> 75
+          - 3.95 -> 70
+          - 3.91 -> 65
+          - 3.87 -> 60
+          - 3.85 -> 55
+          - 3.84 -> 50
+          - 3.82 -> 45
+          - 3.80 -> 40
+          - 3.79 -> 35
+          - 3.77 -> 30
+          - 3.75 -> 25
+          - 3.73 -> 20
+          - 3.71 -> 15
+          - 3.69 -> 10
+          - 3.61 -> 5
+          - 3.50 -> 0
+      - lambda: |-
+          if (x > 100) return 100;
+          if (x < 0) return 0;
+          return x;
+
+# --------------------
+# Batterie Status (Ampel)
+# --------------------
+text_sensor:
+  - platform: template
+    name: "Battery Status"
+    lambda: |-
+      float v = id(battery_voltage).state;
+
+      if (v >= 3.95) return {"voll"};
+      else if (v >= 3.80) return {"ok"};
+      else if (v >= 3.70) return {"niedrig"};
+      else return {"kritisch"};
+
+# --------------------
+# Deep Sleep
+# --------------------
+deep_sleep:
+  run_duration: 90s
+  sleep_duration: 240min
