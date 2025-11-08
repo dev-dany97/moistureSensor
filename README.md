@@ -1,7 +1,7 @@
 # Moisture Sensor
 
 - A self-built soil moisture sensor for plants
-- Two versions: cable and solar
+- Three versions: cable, solar and battery
 - ESPHome and Home Assistant
 - 3D printed case
 
@@ -11,14 +11,27 @@
 
 </div>
 
+## How it works
+
+The sensor sits in the soil and measures how wet it is. A capacitive probe is read by an ESP8266 or ESP32, which sends the values over Wi-Fi to Home Assistant. The battery versions only wake up for a short time to measure and then go into deep sleep, so one charge lasts much longer.
+
+```
+ Capacitive soil sensor ──► ESP8266 / ESP32 ──(Wi-Fi)──► Home Assistant
+                                  ▲
+               USB cable, or battery charged by a solar module
+```
+
+All versions run [ESPHome](https://esphome.io/). To get started, connect the board over USB once and follow the [ESPHome getting started guide](https://esphome.io/guides/getting_started_hassio.html). Each version has its own config in the [`esphome/`](esphome) folder. Keep your Wi-Fi and MQTT credentials out of the configs: copy [`esphome/secrets.example.yaml`](esphome/secrets.example.yaml) to `secrets.yaml` and fill in your values (`secrets.yaml` is in `.gitignore`).
+
 ## Moisture Sensor
 
-So far there are two versions:
+So far there are three versions:
 
 | Version | Board | Power | Notes |
 |---|---|---|---|
 | [1](#version-1-d1-mini-in-a-3d-printed-case) | Wemos D1 mini (ESP8266) | USB cable | For cable operation. 3D printed case ([Cults3D](https://cults3d.com/:127333)) |
 | [2](#version-2-d1-mini-esp32-with-3000-mah-battery-and-solar-module) | D1 mini ESP32 | 3000 mAh battery, solar module | For off-grid solar operation outdoors |
+| [3](#version-3-esp32-soil-sensor-board-with-light-sensor) | Ready-made ESP32 soil sensor board | 18650 battery | For indoor battery operation, with an additional temperature and light sensor |
 
 I use these sensors for my house plants and in my [self-watering raised bed](https://github.com/dev-dany97/raised-bed-irrigation), where the soil moisture decides whether the pump runs.
 
@@ -376,6 +389,238 @@ deep_sleep:
 ```
 
 </details>
+
+### Version 3: ESP32 soil sensor board with light sensor
+
+<img src="docs/images/v3-inside-in-pot.jpg" width="320" alt="Version 3, inside">
+
+| Front | Back |
+|---|---|
+| <img src="docs/images/v3-esp32-board-front.jpg" width="300"> | <img src="docs/images/v3-esp32-board-back.jpg" width="300"> |
+
+The third version is made for indoor battery operation, for places with little light or where the sensor shouldn't stand out as much. It uses a ready-made ESP32 soil sensor board. The capacitive probe, the ESP32, a DHT11 for air temperature and humidity, a charging circuit and an 18650 battery holder are all on one board. There is much less to wire and the board fits into a slim case.
+
+I also soldered a light sensor (VEML7700) onto the board. Together with soil moisture, temperature and humidity, the [Plant Monitor](https://github.com/Olen/homeassistant-plant) integration in Home Assistant can then tell how well the plant is doing.
+
+#### ESPHome and Home Assistant
+
+| Pin | Connected to |
+|---|---|
+| GPIO21 / GPIO19 | I2C SDA / SCL (VEML7700 at `0x10`) |
+| GPIO22 | DHT11 |
+| GPIO32 | Soil probe |
+| GPIO34 | Battery voltage (ADC, multiplied by 14 in the config) |
+| GPIO16 | Status LED |
+
+The config works like the one for [version 2](#esphome-and-home-assistant-1): 60 seconds wait after booting, the same soil calibration, battery level and status, 90 seconds awake and 4 hours deep sleep. It has the same entities, except for the INA219 values. The battery voltage is measured directly with the ADC on GPIO34. Adjust the factor 14 if the value doesn't match a multimeter reading.
+
+The sensor connects to Home Assistant through the ESPHome native API. I add its sensors to a plant in the [Plant Monitor](https://github.com/Olen/homeassistant-plant) integration, which compares moisture, temperature, humidity and light with the plant's needs.
+
+<details>
+<summary>Show <code>plantsensor-v3.yaml</code></summary>
+
+```yaml
+esphome:
+  name: plantsensor-efeutute
+  friendly_name: Plantsensor_Efeutute
+  min_version: 2025.11.0
+  name_add_mac_suffix: false
+
+  on_boot:
+    priority: -100
+    then:
+      - logger.log: "Warte auf stabile Batteriespannung..."
+      - delay: 60s
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+logger:
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  power_save_mode: HIGH
+  fast_connect: true
+
+api:
+
+ota:
+  - platform: esphome
+
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: Europe/Berlin
+    servers:
+      - 0.pool.ntp.org
+      - 1.pool.ntp.org
+      - 2.pool.ntp.org
+
+captive_portal:
+
+web_server:
+  port: 80
+
+# --------------------
+# Status LED
+# --------------------
+output:
+  - platform: gpio
+    pin: GPIO16
+    id: led_output
+
+# --------------------
+# I2C: VEML7700
+# SDA = GPIO21
+# SCL = GPIO19
+# --------------------
+i2c:
+  sda: GPIO21
+  scl: GPIO19
+  scan: true
+
+# --------------------
+# Sensoren
+# --------------------
+sensor:
+
+  # DHT11
+  - platform: dht
+    pin: GPIO22
+    model: DHT11
+    temperature:
+      name: "Plant Temperature"
+    humidity:
+      name: "Plant Humidity"
+    update_interval: 15s
+
+  # Licht VEML7700
+  - platform: veml7700
+    address: 0x10
+    update_interval: 30s
+
+    ambient_light:
+      name: "Plant Ambient Light"
+
+    full_spectrum:
+      name: "Plant Full Spectrum"
+
+    infrared:
+      name: "Plant Infrared"
+
+  # Bodenfeuchte Spannung
+  - platform: adc
+    pin: GPIO32
+    name: "Soil Moisture Sensor Voltage"
+    id: soil_moisture_voltage
+    unit_of_measurement: "V"
+    attenuation: 12db
+    accuracy_decimals: 3
+    update_interval: 10s
+
+  # Bodenfeuchte %
+  - platform: template
+    name: "Soil Moisture"
+    unit_of_measurement: "%"
+    device_class: moisture
+    accuracy_decimals: 0
+    lambda: |-
+      return id(soil_moisture_voltage).state;
+    update_interval: 10s
+    filters:
+      - calibrate_linear:
+          - 1.29 -> 100
+          - 2.80 -> 0
+      - lambda: |-
+          if (x > 100) return 100;
+          if (x < 0) return 0;
+          return x;
+
+  # Batteriespannung
+  - platform: adc
+    pin: GPIO34
+    name: "Battery Voltage"
+    id: battery_voltage
+    attenuation: 12db
+    accuracy_decimals: 2
+    update_interval: 10s
+    filters:
+      - multiply: 14
+
+  # Batteriestand %
+  - platform: template
+    name: "Battery Level"
+    unit_of_measurement: "%"
+    device_class: battery
+    accuracy_decimals: 0
+    lambda: |-
+      return id(battery_voltage).state;
+    filters:
+      - calibrate_linear:
+          - 4.20 -> 100
+          - 4.15 -> 95
+          - 4.11 -> 90
+          - 4.08 -> 85
+          - 4.02 -> 80
+          - 3.98 -> 75
+          - 3.95 -> 70
+          - 3.91 -> 65
+          - 3.87 -> 60
+          - 3.85 -> 55
+          - 3.84 -> 50
+          - 3.82 -> 45
+          - 3.80 -> 40
+          - 3.79 -> 35
+          - 3.77 -> 30
+          - 3.75 -> 25
+          - 3.73 -> 20
+          - 3.71 -> 15
+          - 3.69 -> 10
+          - 3.61 -> 5
+          - 3.50 -> 0
+      - lambda: |-
+          if (x > 100) return 100;
+          if (x < 0) return 0;
+          return x;
+
+# --------------------
+# Batterie Status (Ampel)
+# --------------------
+text_sensor:
+  - platform: template
+    name: "Battery Status"
+    lambda: |-
+      float v = id(battery_voltage).state;
+
+      if (v >= 3.95) return {"voll"};
+      else if (v >= 3.80) return {"ok"};
+      else if (v >= 3.70) return {"niedrig"};
+      else return {"kritisch"};
+
+# --------------------
+# Deep Sleep
+# --------------------
+deep_sleep:
+  run_duration: 90s
+  sleep_duration: 240min
+```
+
+</details>
+
+#### Power supply
+
+There are two ways to wire the battery. Both are based on [this guide (German)](https://tutorials-raspberrypi.de/nodemcu-esp8266-solar-zelle-18650-akku-stromversorgung/).
+
+| Option 1 | Option 2 |
+|---|---|
+| <img src="docs/images/wiring-option-1.png" width="400"> | <img src="docs/images/wiring-option-2.png" width="400"> |
+| Pro: the battery voltage can be measured | Pro: stable 3.3 V, the battery doesn't affect the sensor value |
+| Con: no stable 3.3 V, the sensor value depends on the battery voltage | Con: the battery voltage can't be measured |
+
+**Deep sleep:** like version 2, it is awake for 90 seconds and then sleeps for 4 hours. This makes one battery charge last much longer.
 
 ## License
 
