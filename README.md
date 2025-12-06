@@ -11,6 +11,24 @@
 
 </div>
 
+## Contents
+
+1. [How it works](#how-it-works)
+2. [Moisture Sensor](#moisture-sensor-1)
+   - [Version 1: D1 mini in a 3D printed case](#version-1-d1-mini-in-a-3d-printed-case)
+     - [Parts](#parts)
+     - [Wiring](#wiring)
+     - [ESPHome and Home Assistant](#esphome-and-home-assistant)
+   - [Version 2: D1 mini ESP32 with 3000 mAh battery and solar module](#version-2-d1-mini-esp32-with-3000-mah-battery-and-solar-module)
+     - [Wiring diagram](#wiring-diagram)
+     - [ESPHome and Home Assistant](#esphome-and-home-assistant-1)
+   - [Version 3: ESP32 soil sensor board with light sensor](#version-3-esp32-soil-sensor-board-with-light-sensor)
+     - [ESPHome and Home Assistant](#esphome-and-home-assistant-2)
+     - [Power supply](#power-supply)
+3. [3D models](#3d-models)
+4. [Roadmap](#roadmap)
+5. [License](#license)
+
 ## How it works
 
 The sensor sits in the soil and measures how wet it is. A capacitive probe is read by an ESP8266 or ESP32, which sends the values over Wi-Fi to Home Assistant. The battery versions only wake up for a short time to measure and then go into deep sleep, so one charge lasts much longer.
@@ -147,7 +165,7 @@ sensor:
 
 <img src="docs/images/v2-solar-in-pot.jpg" width="320" alt="Version 2 with solar panel in a plant pot">
 
-The second version is made for off-grid solar operation outdoors. It uses a D1 mini ESP32, together with a 3000 mAh battery that is charged by a solar module. The matching case is in `3d-models/stl/` (`_v2` and `_v3` files).
+The second version is made for off-grid solar operation outdoors. It uses a D1 mini ESP32, together with a 3000 mAh battery that is charged by a solar module. The matching case is in [3D models](#3d-models) (`_v2` and `_v3` files).
 
 Besides soil moisture it measures temperature and humidity (DHT11) and light (VEML7700). An INA219 also measures the battery voltage and current, so I can see how well the solar module keeps up and whether it gets enough sunlight. If there isn't enough sunlight, I can also increase the sending interval to save more energy.
 
@@ -621,6 +639,24 @@ There are two ways to wire the battery. Both are based on [this guide (German)](
 | Con: no stable 3.3 V, the sensor value depends on the battery voltage | Con: the battery voltage can't be measured |
 
 **Deep sleep:** like version 2, it is awake for 90 seconds and then sleeps for 4 hours. This makes one battery charge last much longer.
+
+## 3D models
+
+The case for version 1 is from [Cults3D](https://cults3d.com/:127333). The files below were made in [Tinkercad](https://www.tinkercad.com/). You can preview the files online, for example with [ViewSTL](https://www.viewstl.com/).
+
+| File | Part |
+|---|---|
+| [`Pflanzensensor_3D_Modell.stl`](3d-models/stl/Pflanzensensor_3D_Modell.stl), [`Pflanzensensor_v2.stl`](3d-models/stl/Pflanzensensor_v2.stl) | Complete case |
+| [`Pflanzensensor_Sockel_v1.stl`](3d-models/stl/Pflanzensensor_Sockel_v1.stl), [`_v2`](3d-models/stl/Pflanzensensor_Sockel_v2.stl), [`_v3`](3d-models/stl/Pflanzensensor_Sockel_v3.stl) | Base |
+| [`Pflanzensensor_Deckel_v2.stl`](3d-models/stl/Pflanzensensor_Deckel_v2.stl), [`_v3`](3d-models/stl/Pflanzensensor_Deckel_v3.stl) | Lid |
+| [`Pflanzensensor_Schraube_v3.stl`](3d-models/stl/Pflanzensensor_Schraube_v3.stl) | Screw |
+
+The same models as OBJ files (exported from Tinkercad) are in [`3d-models/obj/`](3d-models/obj).
+
+## Roadmap
+
+- [ ] Use less power
+- [x] More sensors, for example light and temperature (versions 2 and 3)
 
 ## License
 
