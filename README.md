@@ -41,6 +41,8 @@ The sensor sits in the soil and measures how wet it is. A capacitive probe is re
 
 All versions run [ESPHome](https://esphome.io/). To get started, connect the board over USB once and follow the [ESPHome getting started guide](https://esphome.io/guides/getting_started_hassio.html). Each version has its own config in the [`esphome/`](esphome) folder. Keep your Wi-Fi and MQTT credentials out of the configs: copy [`esphome/secrets.example.yaml`](esphome/secrets.example.yaml) to `secrets.yaml` and fill in your values (`secrets.yaml` is in `.gitignore`).
 
+**Calibrate every sensor on its own.** Every capacitive soil sensor delivers slightly different values, even two sensors of the same model. That's why each plant sensor has to be calibrated individually: read the `Soil Moisture Sensor Voltage` once with the probe in dry air and once in a glass of water, and enter both values in `calibrate_linear` in that sensor's config (water is 100 %, dry air is 0 %). The values 1.29 V and 2.80 V in the configs come from my sensors and are only a starting point.
+
 ## Moisture Sensor
 
 So far there are three versions:
@@ -86,7 +88,7 @@ Version 1 runs without deep sleep, because it is powered by cable. It reads the 
 | `pflanzensensor/sensor/bodenfeuchtigkeit/state` | Soil moisture in % |
 | `pflanzensensor/sensor/soil_moisture_sensor_voltage/state` | Raw sensor voltage |
 
-Home Assistant picks the values up through its MQTT integration. Calibrate the two values in `calibrate_linear` for your own sensor: the voltage in water is 100 %, the voltage in dry air is 0 %. If Windows doesn't recognise the D1 mini, install the [CH340 driver](https://www.wemos.cc/en/latest/ch340_driver.html).
+Home Assistant picks the values up through its MQTT integration. Calibrate the two values in `calibrate_linear` for each sensor, see [How it works](#how-it-works). If Windows doesn't recognise the D1 mini, install the [CH340 driver](https://www.wemos.cc/en/latest/ch340_driver.html).
 
 <details>
 <summary>Show <code>plantsensor-v1.yaml</code></summary>
@@ -185,7 +187,7 @@ Besides soil moisture it measures temperature and humidity (DHT11) and light (VE
 How the config works:
 
 - After booting, the sensor waits 60 seconds so the battery voltage is stable before it measures.
-- Soil moisture is read as a voltage on GPIO32 and converted to percent: 1.29 V is 100 % (wet), 2.80 V is 0 % (dry). Calibrate these two values for your own sensor.
+- Soil moisture is read as a voltage on GPIO32 and converted to percent: 1.29 V is 100 % (wet), 2.80 V is 0 % (dry). These values come from my sensor, so calibrate them for each of your sensors (see [How it works](#how-it-works)).
 - The battery voltage comes from the INA219. The battery level in percent is calculated from it (4.20 V is 100 %, 3.50 V is 0 %), and a text sensor shows the status as `voll`, `ok`, `niedrig` or `kritisch`.
 - The sensor is awake for 90 seconds and then goes into deep sleep for 4 hours.
 
@@ -430,7 +432,7 @@ I also soldered a light sensor (VEML7700) onto the board. Together with soil moi
 | GPIO34 | Battery voltage (ADC, multiplied by 14 in the config) |
 | GPIO16 | Status LED |
 
-The config works like the one for [version 2](#esphome-and-home-assistant-1): 60 seconds wait after booting, the same soil calibration, battery level and status, 90 seconds awake and 4 hours deep sleep. It has the same entities, except for the INA219 values. The battery voltage is measured directly with the ADC on GPIO34. Adjust the factor 14 if the value doesn't match a multimeter reading.
+The config works like the one for [version 2](#esphome-and-home-assistant-1): 60 seconds wait after booting, the same soil calculation (calibrate it for this sensor too), battery level and status, 90 seconds awake and 4 hours deep sleep. It has the same entities, except for the INA219 values. The battery voltage is measured directly with the ADC on GPIO34. Adjust the factor 14 if the value doesn't match a multimeter reading.
 
 The sensor connects to Home Assistant through the ESPHome native API. I add its sensors to a plant in the [Plant Monitor](https://github.com/Olen/homeassistant-plant) integration, which compares moisture, temperature, humidity and light with the plant's needs.
 
